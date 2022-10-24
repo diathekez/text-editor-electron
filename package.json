@@ -1,0 +1,15 @@
+{
+  "name": "text-editor-electron",
+  "version": "1.0.0",
+  "description": "A text editor built with Electron.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "Bryan Granados",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^21.2.0",
+    "electron-reloader": "^1.2.3"
+  }
+}
