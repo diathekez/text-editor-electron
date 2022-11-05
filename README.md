@@ -14,3 +14,9 @@ An Electron-based text editor.
 Run with
 
 `npm run start`
+
+Build with
+
+`npm build`
+
+Since it's an Electron app, it can run on both Windows and MacOS.
