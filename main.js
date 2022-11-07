@@ -1,8 +1,17 @@
 // Creates the main browser window
-const { BrowserWindow, app, ipcMain, dialog } = require("electron");
+const { BrowserWindow, app, ipcMain, dialog, Menu } = require("electron");
 const path = require("path");
 // Creates file from filePath
 const fs = require("fs");
+
+// Makes it so devtools only open when in dev mode
+const isDevEnv = process.env.NODE_ENV === "development;";
+
+if (isDevEnv) {
+  try {
+    require("electron-reloader")(module);
+  } catch {}
+}
 
 // Loads electron-reloader package, which automatically refreshes changes from index.html
 require("electron-reloader")(module);
@@ -22,17 +31,71 @@ const createWindow = () => {
     },
   });
 
-  // Loads browser window with the dev tools already open. This is optional.
-  mainWindow.webContents.openDevTools();
+  // Loads browser window with the dev tools already open. This is optional. Will only run in dev mode.
+  if (isDevEnv) {
+    mainWindow.webContents.openDevTools();
+  }
   mainWindow.loadFile("index.html");
 
-  //   Adds custom menu to txt editor app
+  // Adds custom menu on the interface using an array
   const menuTemplate = [
     {
       label: "File",
-      submenu: [],
+      submenu: [
+        {
+          label: "Add New File",
+          click: () => ipcMain.emit("open-document-trigger"),
+        },
+        {
+          label: "Create Add New File",
+          click: () => ipcMain.emit("create-document-trigger"),
+        },
+        {
+          type: "seperator",
+        },
+        {
+          label: "Open Recent",
+          role: "recentdocuments",
+          submenu: [
+            {
+              label: "Clear Recent",
+              role: "clearrecentdocuments",
+            },
+          ],
+        },
+        {
+          role: "quit",
+        },
+      ],
+    },
+    // { role: 'editMenu' }
+    {
+      label: "Edit",
+      submenu: [
+        { role: "undo" },
+        { role: "redo" },
+        { type: "separator" },
+        { role: "cut" },
+        { role: "copy" },
+        { role: "paste" },
+        ...(isMac
+          ? [
+              { role: "pasteAndMatchStyle" },
+              { role: "delete" },
+              { role: "selectAll" },
+              { type: "separator" },
+              {
+                label: "Speech",
+                submenu: [{ role: "startSpeaking" }, { role: "stopSpeaking" }],
+              },
+            ]
+          : [{ role: "delete" }, { type: "separator" }, { role: "selectAll" }]),
+      ],
     },
   ];
+
+  const menu = Menu.buildFromTemplate(menuTemplate);
+  Menu.setApplicationMenu(menu);
 };
 
 // Controls the lifecycle of the app and returns promise that is fulfilled when Electron is started
@@ -46,6 +109,24 @@ const handleError = () => {
   }).show();
 };
 
+const openFile = (filePath) => {
+  // Loads content of file
+  fs.readFile(filePath, "utf8", (error, content) => {
+    if (error) {
+      handleError();
+    } else {
+      app.addRecentDocument(filePath);
+      openedFilePath = filePath;
+      mainWindow.webContents.send("document-opened", { filePath, content });
+    }
+  });
+};
+
+// Event that lets you open a recent file
+app.on("open-file", (_, filePath) => {
+  openFile(filePath);
+});
+
 // Opens dialog box that only lets app open .txt files
 ipcMain.on("open-document-triggered", () => {
   dialog
@@ -55,16 +136,7 @@ ipcMain.on("open-document-triggered", () => {
     })
     .then(({ filePaths }) => {
       const filePath = filePaths[0];
-
-      // Loads content of file
-      fs.readFile(filePath, "utf8", (error, content) => {
-        if (error) {
-          handleError();
-        } else {
-          openedFilePath = filePath;
-          mainWindow.webContents.send("document-opened", { filePath, content });
-        }
-      });
+      openFile(filePath);
     });
 });
 
@@ -82,6 +154,7 @@ ipcMain.on("create-document-triggered", () => {
         if (error) {
           handleError();
         } else {
+          app.addRecentDocument(filePath);
           openedFilePath = filePath;
           // Sends the event back to renderer
           mainWindow.webContents.send("document-created", filePath);

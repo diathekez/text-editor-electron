@@ -5,7 +5,6 @@ An Electron-based text editor.
 ## Tech Stack
 
 - [Electron](https://www.electronjs.org/)
-- [Bootstrap](https://getbootstrap.com/)
 
 ## Install
 
@@ -17,6 +16,6 @@ Run with
 
 Build with
 
-`npm build`
+`npm run build`
 
-Since it's an Electron app, it can run on both Windows and MacOS.
+Since it's an Electron app, it can run on both Windows and MacOS. There are additional lines of code for the menu on main.js that you can remove depending on your OS preference.
